@@ -4,24 +4,44 @@
 .mode column
 .header on
 
--- Training FOREIGN KEY NOT YET IMPLEMENTED!!!!!
-
 --##############Tables:############### 
 
---# Mouse is the main table and must be updated first before other tables can be updated with a specific
---# 		MouseID's data
+--# Study must be entered first before you can enter mice in it
+CREATE TABLE Study (
+StudyID TEXT NOT NULL PRIMARY KEY, --# Unique StudyID/study name
+MouseIDprefix TEXT NOT NULL, --# Prefix for naming new study mice
+DateAdded TEXT
+);
+
+--# Mouse must be entered after study is before can add any training or imaging
 CREATE TABLE Mouse (
 MouseID TEXT NOT NULL PRIMARY KEY, --# Unique name for a mouse
 StudyID TEXT NOT NULL, --# StudyID for which this mouse participated in
 DOB TEXT, --# Date of birth for mouse --- YYYYMMDD
 Breeder TEXT, --# The breeder cage number
 Cage TEXT, --# The cage number for mouse
+Sex TEXT, --# The sex of the mouse
 Genotype TEXT, --# The genotype for mouse
-Notes text); --# Extra notes
+Injections TEXT, --# Type and number of injections then weight of mouse at injection (if applicable)
+Notes TEXT,
+FOREIGN KEY(StudyID) REFERENCES Study(StudyID)); --# Extra notes
+
+CREATE TRIGGER MouseInsert
+before insert on Mouse
+for each row begin
+select raise(abort, 'Insert on table "Mouse" violates Foreign Key Constraint "MouseInsert" - ensure study is in database')
+where (SELECT StudyID FROM Study WHERE StudyID = NEW.StudyID) is null;
+end;
+CREATE TRIGGER MouseUpdate
+before update on Mouse
+for each row begin
+select raise(abort, 'Update on table "Mouse" violates Foreign Key Constraint "MouseUpdate" - ensure study is in database')
+where (SELECT StudyID FROM Study WHERE StudyID = NEW.StudyID) is null;
+end;
 
 CREATE TABLE Training (
 MouseID TEXT NOT NULL, --# From Mouse table
-TrainingID TEXT NOT NULL, --# Training cohort identifier YY-### starting at YY-001
+TrainingID TEXT NOT NULL, --# Training cohort YYYY-### starting at YYYY-001
 TrainingType TEXT NOT NULL, --# E.g. FC-Cxt, MWM-spatial, Rotarod, FC-Tone
 StartDate TEXT, --# Date of training start --- YYYYMMDD
 Protocol TEXT, --# E.g 6 trials per day for 4 days, 3 tones 1 minute apart
