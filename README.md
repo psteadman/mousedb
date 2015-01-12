@@ -1,11 +1,14 @@
 MouseDB
 =========
 
-# Updates:
+This is a python, r, and sqlite code for managing a database of mice used in experiments. This can help with colony management, tracking mouse behaviour experiments, mouse behaviour data and analysis of the data. It may also include imaging later on.
 
-Operation for rotarod data entry. Working on watermaze and fear conditioning
+#### Updates:
 
-# User guide to MouseDB
+- Operational for rotarod data entry. 
+- Working on watermaze and fear conditioning
+
+# An user guide to MouseDB
 
 A python and sqlite database for managing your mouse colony
 
