@@ -4,12 +4,12 @@
 #
 # Created by Patrick Steadman, Mouse Imaging Centre, Hospital for Sick Children
 # Supervised by Dr. Jason Lerch
-# Aug 2010 to Dec 2010 - v1
+# Aug 2010 to Dec 2010 - v1.00
 # 
 
 # Modified by Patrick Steadman, Frankland Lab, Hospital for Sick Children
 # Supervised by Dr. Paul Frankland
-# December 2014 - v1.01
+# December 2014 to Present - v1.1
 #
 
 import string
@@ -24,13 +24,11 @@ import datetime
 
 #---------------------------------------------------------------------------------
 #							TO DO
-# Think about how options can be put in as lists and then entered in the database as 1 entry in list is 1 row
+# Add option --update or --rewrite to update an entry in a table. Should be a logical function (T/F)
+# Error checking for whether options input data is formated correctly
 
-# Define training protocols
-
-# Error checking for whether options input data is formated correctly example weight should be ##.# and nothing else and day should be # 
+# Think about how options can be put in as lists and then entered in the database (1 row=1 entry)
 # Write code in R to input behaviour analysis data into BarnesBehaviour table
-# Fix DOB entry so it is consistent with other fields should be dd/mm/yy and then update this in all places where it is called or used (includes Update-dates.py and several spots in this program)
 
 # FIXED so that if prior scan doesnt exist for a mouse scanned first time on a day other than 0 it will work...
 # SEEMS FINE in R: Question whether the default for trday and rday should be 'NA' or should it be None
@@ -44,36 +42,6 @@ import datetime
 #---------------------------------------------------------------------------------
 
 # Functions:
-def monthnumeric( monthin ):
-	if (monthin == 'jan'):
-		month = 1
-	elif monthin == 'feb':
-		month = 2
-	elif monthin == 'mar':
-		month = 3
-	elif monthin == 'apr':
-		month = 4
-	elif monthin == 'may':
-		month = 5
-	elif monthin == 'jun':
-		month = 6
-	elif monthin == 'jul':
-		month = 7
-	elif monthin == 'aug':
-		month = 8
-	elif monthin == 'sep':
-		month = 9
-	elif monthin == 'oct':
-		month = 10
-	elif monthin == 'nov':
-		month = 11
-	elif monthin == 'dec':
-		month = 12
-	return month; 
-def yearnumeric( yearin ):
-	year = "20%s" %yearin
-	year = int(year)
-	return year;
 def executedb( connection, statement, variables ):
 	out = connection.cursor()
 	out.execute(statement, variables)
@@ -96,16 +64,6 @@ help.rotarodopts = 'Required options: --mouseid, --trainingid, --day'
 
 help.watermazeopts = ' Not yet implemented '
 help.fcopts = ' Not yet implemented '
-
-# help.trialopts = 'Required options: --csvfile, --trainer, --mouseid, \n \
-# Optional options: --trainingid (default: basic)'
-# # Below not complete yet
-# help.videotrackingfile = 'Required options: --mouseid, --mdescript, --trainingid\n \
-# Optional options: --path'
-# help.scanopts = 'Required options: --mouseid, --image, --day, --weight, --operator, \
-# --modality\n \
-# Optional options: --tday, --scannote, --bill, --quality, --rday, --trday --perfusion \
-# (i.e. dd/mm/yyyy), --study (keep consistent for each study)'
 
 
 if __name__ == "__main__":
