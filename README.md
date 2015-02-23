@@ -50,7 +50,8 @@ mousedb.py --help
     
     Example:
     ``` sh
-    mousedb.py -s --studyid CREB-hippocampus --mouseprefix CREBHippo
+    mousedb.py -s --studyid CREB-hippocampus --mouseprefix CREBHippo \
+    database.db
     ```
 
 2. Add mice to your study
@@ -60,8 +61,9 @@ mousedb.py --help
     Example: 
     ``` sh
     mousedb.py -m --studyid StudyName --sex M --breeder 550540 --dob 20141127 \
-    --cage 557884 --genotype WT mydatabase.db
+    --cage 557884 --genotype WT database.db
     mousedb.py -m --mouseid CREBHippo_0022 --injections='Tamoxifen, 1, 21.9' \
+    database.db
     ```
     The --injections option is structured as "drug, # injections, weight at each injection" but the user can use an alternative structure.
 
@@ -71,8 +73,9 @@ mousedb.py --help
     
     Example:
     ``` sh
-    mousedb.py franklandpsteadman.db -t --ttype watermaze --startdate 20150217 \
-    --protocol='6 trial/dy, 3 days' --trainingid 2015-004 --mouseid CREBHippo_0020
+    mousedb.py database.db -t --ttype watermaze --startdate 20150217 \
+    --protocol='6 trial/dy, 3 days' --trainingid 2015-004 --mouseid CREBHippo_0020 \
+    database.db
     ```
 
 4. Add a training experiment's data
@@ -81,9 +84,9 @@ mousedb.py --help
     
     Example:
     ``` sh
-    mousedb.py franklandpsteadman.db -r --trainingid 2014-008 \
+    mousedb.py database.db -r --trainingid 2014-008 \
     --mouseid CREBHippo_0008 --rodzone 4 --csvfile 141211-WT-Day3.txt --day 3
-    mousedb.py franklandpsteadman.db -r --mouseid CREBHippo_0014 --nmice 3 \
+    mousedb.py database.db -r --mouseid CREBHippo_0014 --nmice 3 \
     --trainingid 2015-001 --day 1 --csvfile ../rotarodfiles/2015-001-Day1.txt
     ```
 
