@@ -61,9 +61,9 @@ mousedb.py --help
     ``` sh
     mousedb.py -m --studyid StudyName --sex M --breeder 550540 --dob 20141127 \
     --cage 557884 --genotype WT mydatabase.db
-    mousedb.py -m --mouseid Study1_0022 --injections='Tamoxifen, 1, 21.9' \
-    (drug, # injections, weight at each injection)
+    mousedb.py -m --mouseid CREBHippo_0022 --injections='Tamoxifen, 1, 21.9' \
     ```
+    The --injections option is structured as "drug, # injections, weight at each injection" but the user can use an alternative structure.
 
 3. Add a training experiment
 
@@ -72,13 +72,19 @@ mousedb.py --help
     Example:
     ``` sh
     mousedb.py franklandpsteadman.db -t --ttype watermaze --startdate 20150217 \
-    --protocol='6 trial/dy, 3 days' --trainingid 2015-004 --mouseid Study1_0020
+    --protocol='6 trial/dy, 3 days' --trainingid 2015-004 --mouseid CREBHippo_0020
     ```
 
 4. Add a training experiment's data
 
-    This is where you upload data from a behaviour experiment, whether it is fear conditioning, rotarod, watermaze, etc. into the database
+    This is where you upload data from a behaviour experiment, whether it is rotarod, watermaze, fear conditioning, etc. into the database. Right now rotarod data upload is operational. The other two are in development. 
     
     Example:
+    ``` sh
+    mousedb.py franklandpsteadman.db -r --trainingid 2014-008 \
+    --mouseid CREBHippo_0008 --rodzone 4 --csvfile 141211-WT-Day3.txt --day 3
+    mousedb.py franklandpsteadman.db -r --mouseid CREBHippo_0014 --nmice 3 \
+    --trainingid 2015-001 --day 1 --csvfile ../rotarodfiles/2015-001-Day1.txt
+    ```
 
     
