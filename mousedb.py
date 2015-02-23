@@ -9,7 +9,7 @@
 
 # Modified by Patrick Steadman, Frankland Lab, Hospital for Sick Children
 # Supervised by Dr. Paul Frankland
-# December 2014 to Present - v1.1
+# December 2014 to Present - v1.10
 #
 
 import string
@@ -41,6 +41,11 @@ import datetime
 # DONE: Create new program that updates all days since last scan and nscan and then just run this at the end of the program every time it is run - CALLED Update-dates.py
 #---------------------------------------------------------------------------------
 
+# Dictionary of options and sqlite database column
+columns = {
+	'studyid' : 'StudyID',
+	'mouseid' : 'MouseID'
+}
 # Functions:
 def executedb( connection, statement, variables ):
 	out = connection.cursor()
@@ -52,15 +57,24 @@ def fetchdb( connection, statement, variables ):
 	out.execute(statement, variables)
 	out = out.fetchone()
 	return out;
+def buildstatement():
+	
+	return statement;
+def buildvariables():
+	
+	return variables;
+
 # Variables for help dialogues
 help.studyopts = 'Required options: --studyid, --mouseprefix'
 help.mouseopts = 'Required options: --dob (i.e. yyyymmdd), \
 --breeder, --cage\n \
 Optional options: --mouseid, --genotype'
 help.trainingopts = 'Required options: --mouseid, --ttype, \
---trainingid, --startdate (i.e. yyyymmdd) \n \
-Optional options: --protocol'
-help.rotarodopts = 'Required options: --mouseid, --trainingid, --day'
+--trainingid, --startdate (i.e. yyyymmdd) --protocol\n \
+Optional options: None'
+help.rotarodopts = 'Required options: --mouseid, --trainingid, --day, \
+--csvfile\n \
+Optional options: None'
 
 help.watermazeopts = ' Not yet implemented '
 help.fcopts = ' Not yet implemented '
@@ -139,8 +153,8 @@ if __name__ == "__main__":
 					 Format is YYYY-###",
 					 type="string", default=None)
 	group2.add_option("--protocol", dest="protocol",
-					 help="Training protocol for animal of interest (default: 1.01)",
-					 type="string", default='1.01')
+					 help="Training protocol for animal of interest (default: 1)",
+					 type="string", default=None)
 
 #	Add rotarod training data
 	parser.add_option("-r","--addrotarod",dest="rotarod", #Boolean argument
@@ -153,6 +167,9 @@ if __name__ == "__main__":
 	group2.add_option("--nmice", dest="nmice",
 					 help="Number of mice in the csv file you are adding",
 					 default="1", type="int")
+	group2.add_option("--rodzone", dest="mouserodzone",
+					 help="If adding a mouse, specific which rod/zone trained on",
+					 default=None, type="int")
 	group2.add_option("--csvfile", dest="csvfile",
 					 help="csv file of behaviour data",
 					 type="string",default=None) 
@@ -184,7 +201,7 @@ if __name__ == "__main__":
 ###########################
 	prog = os.path.basename(sys.argv[0])
 	usage = "%s [options] database.db" %prog
-# Declare some variables and check boolean options presence
+	# Declare some variables and check boolean options presence
 	if ((opts.addstudy == False and opts.addmouse == False and opts.addtraining == False \
 		and opts.rotarod == False) or (args == [])):
 	 	print 'Missing a database or no input options given... \n' + usage + '\n'
@@ -195,9 +212,11 @@ if __name__ == "__main__":
 		print 'Preparing to enter data into ' + database
 		con = sqlite3.connect(database)
 
+##################################
 # Add Study to database			
+##################################
 	if opts.addstudy == 1:
-# Check for the correct input options
+	# Check for the correct input options
 		if opts.studyid != None and opts.mouseprefix != None:
 			print 'Adding study ' + opts.studyid + ' to ' + database
 			executedb(con, 'INSERT INTO Study (StudyID, MouseIDprefix, DateAdded) VALUES (?,?,?)',
@@ -207,11 +226,13 @@ if __name__ == "__main__":
 			print '\nMandatory options for adding a study to %s are missing.\n%s\n' % (database, help.studyopts)
 
 # Current database is designed with foreign keys for the Mouse table, 
-	# so only should be able to add a new mouse for a study that exists in the database already
+# so only should be able to add a new mouse for a study that exists in the database already
 
-# Add Mouse to database			
+##################################
+# Add Mouse to database	
+##################################		
 	if opts.addmouse == 1:
-# Check for the correct input options
+	# Check for the correct input options
 		if opts.studyid != None and opts.dob != None and opts.breeder != None and opts.cage != None:
 			mprefix = fetchdb(con, 'SELECT MouseIDprefix FROM Study where StudyID = ?',(opts.studyid, ) )[0]
 			nmice = fetchdb(con, 'SELECT count(*) FROM Mouse where StudyID = ?',(opts.studyid, ))[0]
@@ -239,19 +260,22 @@ if __name__ == "__main__":
 			print '\nMandatory options for adding a mouse to %s are missing.\n%s\n' % (database, help.mouseopts)
 
 # Current database is designed with foreign keys for the Training table, 
-	# so only should be able to add a new training session for mouse that exists in the database already
+# so only should be able to add a new training session for mouse that exists in the database already
 
-# Add training session to database			
+##################################
+# Add training session to database	
+##################################		
 	if opts.addtraining == 1:
-		try: # may already be defined if adding mouse and training at the same time
+		# may already be defined if adding mouse and training at the same time
+		try:
 			mouseid
 		except NameError:
 			mouseid = opts.mouseid
-# Check for the correct input options
+		# Check for the correct input options
 		if mouseid != None and opts.trainingtype != None and \
-		opts.startdate != None and opts.trainingid != None:
+		opts.startdate != None and opts.trainingid != None and opts.protocol != None:
 			print 'Adding new training session for %s' %mouseid
-# Checking to see if entry already exists based on MouseID and starting date of training
+			# Checking to see if entry already exists based on MouseID and starting date of training
 			(d, ) = fetchdb(con, 'Select count(*) from Training where MouseID = ? and StartDate = ?', 
 							(mouseid, opts.startdate))
 			if d == 0:
@@ -263,19 +287,26 @@ if __name__ == "__main__":
 			else:
 				print 'Training Session already exists'
 		else:
-			print '\nMandatory options for adding a training session to %s are missing.\n%s\n' % (database, help.trainingopts)
+			print '\nMandatory options for adding a training session to \
+			%s are missing.\n%s\n' % (database, help.trainingopts)
 
+##################################
 # Add rotarod data to the database
+##################################
 	if opts.rotarod == 1:
 		try:
 			mouseid 
 		except NameError:
 			mouseid = opts.mouseid 
-# Check for correct input options
-	# Perhaps assume mice trained in sequence so then ask for n mice and take first mouse + n for csvdata
+		# Check for correct input options
+			# Perhaps assume mice trained in sequence so then ask for n mice and 
+			# take first mouse + n for csvdata - THIS IS NOT A CONSISTENT ASSUMPTION
+			# Thus must have an option to just enter 1 mouse with specified zone
 		if opts.csvfile != None and opts.trainingid != None and mouseid != None and opts.day != None:
-			if opts.nmice == 1 or opts.nmice == None: # we are adding many mice :)
-				print "Entering %s mouse" %opts.nmice
+			if opts.nmice == 1 or opts.nmice == None:
+				if opts.mouserodzone == None:
+					print "Missing option --rodzone when entering 1 mouse only"; sys.exit()
+				print "Entering 1 mouse. This mouse's zone is %s" %opts.mouserodzone
 			elif opts.nmice > 1:
 				print "Entering %s mice" %opts.nmice
 			elif opts.nmice < 1:
@@ -286,30 +317,31 @@ if __name__ == "__main__":
 			trial_csv.readline() # header line
 			entries = trial_csv.readlines()
 			for entry in entries:
-				items = entry.split("\t") #split each line based on ,
+				items = entry.split("\t") #split each line by tabs
 				items = [x.strip() for x in items] # strip spaces
 				trial = items[4][2:] # assume first 2 characters are mouse and a dash
-				# if items[4][0] == items[3]:
-				# 	subject = items[3]
-				# else:
-				# 	print "WARNING! using zone to determine subject because:"
-				# 	print "Zone: "+items[3]+" != SubjectID: "+items[4][0]
-				# 	subject = items[3]
 				try:
 					subject = items[4][0]
 				except IndexError:
 					print "Skipping zone %s - must've been empty" % (items[3])
-					continue
-				if int(subject) == 1:
-					mouseid = opts.mouseid 
+					continue 
+				# For entering 1 mouse at a time
+				if opts.nmice == 1 or opts.nmice == None and opts.mouserodzone != None:
+					mouseid = opts.mouseid
+					if int(items[3]) != int(opts.mouserodzone):
+						print "Skipping zone %s in trial %s - doesnt match --rodzone" % (items[3],trial)
+						continue
+				# For entering several mice at a time
+				elif int(subject) == 1 and opts.mouserodzone == None:
+					mouseid = opts.mouseid
 				elif int(subject) > 1 and opts.nmice >= int(subject):
 					n = int(opts.mouseid[-4:])
 					prefix = mouseid[:-4]
 					mouseid = prefix+'%04d' %(n+int(subject)-1)
 				elif opts.nmice < int(subject):
-					print "nmice is less than %s" %subject
-					break # exit this iteration of the for loop
-			# Checking to see if entry already exists based on MouseID and starting date of training
+					print "nmice is less than %s, so skipping this mouse" %subject
+					continue # exit this iteration of the for loop
+				# Checking to see if entry already exists based on MouseID and starting date of training
 				(d, ) = fetchdb(con, 'Select count(*) from Rotarod where MouseID = ? \
 					and TrainingID = ? and Day = ? and Trial = ?', (mouseid, opts.trainingid, opts.day, trial))
 				if d == 0:
@@ -324,6 +356,102 @@ if __name__ == "__main__":
 					print "This mouse, trial and day already exist in the %s" %database
 		else:
 			print '\nMandatory options for adding rotarod session to %s are missing.\n%s\n' % (database, help.rotarodopts)		
+
+# # Add watermaze data to the database
+# 	if opts.watermaze == 1:
+# 		try:
+# 			mouseid 
+# 		except NameError:
+# 			mouseid = opts.mouseid 
+# # Check for correct input options
+# 	# Perhaps assume mice trained in sequence so then ask for n mice and take first mouse + n for csvdata
+# 		if opts.csvfile != None and opts.trainingid != None and mouseid != None and opts.day != None:
+# 			if opts.nmice == 1 or opts.nmice == None: # we are adding many mice :)
+# 				print "Entering %s mouse" %opts.nmice
+# 			elif opts.nmice > 1:
+# 				print "Entering %s mice" %opts.nmice
+# 			elif opts.nmice < 1:
+# 				print "Dude, less than 1 mouse given - are you sure you did this right?"
+# 				sys.exit()
+# 			# add data
+# 			trial_csv = open(opts.csvfile, 'r')
+# 			trial_csv.readline(); trial_csv.readline() # header line x2
+# 			entries = trial_csv.readlines()
+
+
+# 			# Checking to see if entry already exists based on MouseID and starting date of training
+# 				(d, ) = fetchdb(con, 'Select count(*) from Rotarod where MouseID = ? \
+# 					and TrainingID = ? and Day = ? and Trial = ?', (mouseid, opts.trainingid, opts.day, trial))
+# 				if d == 0:
+# 					executedb(con, 'INSERT INTO Rotarod (MouseID, TrainingID, Day, Trial,\
+# 								Rod, Speed, Duration, EndSpeed) values (?,?,?,?,?,?,?,?)',
+# 								(mouseid, opts.trainingid, opts.day, trial, items[3], items[2],  
+# 								items[5], items[6].strip(' RPM')))
+# 					print "Added %s for %s on day %s in trial %s" % (mouseid, opts.trainingid, opts.day, trial)
+# 					print "Data added: Rod Speed Duration EndSpeed "
+# 					print items[3]+" "+items[2]+" "+items[5]+" "+items[6].strip(' RPM')
+# 				else:
+# 					print "This mouse, trial and day already exist in the %s" %database
+# 		else:
+# 			print '\nMandatory options for adding rotarod session to %s are missing.\n%s\n' % (database, help.rotarodopts)		
+
+
+# # Add fear conditioning data to the database
+# 	if opts.fearconditioning == 1:
+# 		try:
+# 			mouseid 
+# 		except NameError:
+# 			mouseid = opts.mouseid 
+# # Check for correct input options
+# 	# Perhaps assume mice trained in sequence so then ask for n mice and take first mouse + n for csvdata
+# 		if opts.csvfile != None and opts.trainingid != None and mouseid != None and opts.day != None:
+# 			if opts.nmice == 1 or opts.nmice == None: # we are adding many mice :)
+# 				print "Entering %s mouse" %opts.nmice
+# 			elif opts.nmice > 1:
+# 				print "Entering %s mice" %opts.nmice
+# 			elif opts.nmice < 1:
+# 				print "Dude, less than 1 mouse given - are you sure you did this right?"
+# 				sys.exit()
+# 			# add data
+# 			trial_csv = open(opts.csvfile, 'r')
+# 			trial_csv.readline() # header line
+# 			entries = trial_csv.readlines()
+
+# 			for entry in entries:
+# 				items = entry.split("\t") #split each line based on ,
+# 				items = [x.strip() for x in items] # strip spaces
+# 				trial = items[4][2:] # assume first 2 characters are mouse and a dash
+# 				try:
+# 					subject = items[4][0]
+# 				except IndexError:
+# 					print "Skipping zone %s - must've been empty" % (items[3])
+# 					continue
+# 				if int(subject) == 1:
+# 					mouseid = opts.mouseid 
+# 				elif int(subject) > 1 and opts.nmice >= int(subject):
+# 					n = int(opts.mouseid[-4:])
+# 					prefix = mouseid[:-4]
+# 					mouseid = prefix+'%04d' %(n+int(subject)-1)
+# 				elif opts.nmice < int(subject):
+# 					print "nmice is less than %s" %subject
+# 					break # exit this iteration of the for loop
+
+# 			# Checking to see if entry already exists based on MouseID and starting date of training
+# 				(d, ) = fetchdb(con, 'Select count(*) from Rotarod where MouseID = ? \
+# 					and TrainingID = ? and Day = ? and Trial = ?', (mouseid, opts.trainingid, opts.day, trial))
+# 				if d == 0:
+# 					executedb(con, 'INSERT INTO Rotarod (MouseID, TrainingID, Day, Trial,\
+# 								Rod, Speed, Duration, EndSpeed) values (?,?,?,?,?,?,?,?)',
+# 								(mouseid, opts.trainingid, opts.day, trial, items[3], items[2],  
+# 								items[5], items[6].strip(' RPM')))
+# 					print "Added %s for %s on day %s in trial %s" % (mouseid, opts.trainingid, opts.day, trial)
+# 					print "Data added: Rod Speed Duration EndSpeed "
+# 					print items[3]+" "+items[2]+" "+items[5]+" "+items[6].strip(' RPM')
+# 				else:
+# 					print "This mouse, trial and day already exist in the %s" %database
+# 		else:
+# 			print '\nMandatory options for adding rotarod session to %s are missing.\n%s\n' % (database, help.rotarodopts)		
+
 
 # # Update the dates	
 # 	if opts.mouseid != None:
