@@ -48,15 +48,32 @@ columns = {
 }
 # Functions:
 def executedb( connection, statement, variables ):
+	# 
+	# executes a statement (e.g. insert, delete or update)
+	#
 	out = connection.cursor()
 	out.execute(statement, variables)
 	con.commit()
 	out.close();
 def fetchdb( connection, statement, variables ):
+	#
+	# Fetches the first result only
+	#
 	out = connection.cursor()
 	out.execute(statement, variables)
-	out = out.fetchone()
-	return out;
+	return out.fetchone()
+	out.close();
+def fetchalldb( connection, statement, variables ):
+	#
+	# Fetches column information and all the results
+	#
+	out = connection.cursor()
+	if variables != None:
+		out.execute(statement, variables)
+	else:
+		out.execute(statement)
+	return [out.description, out.fetchall()]
+	out.close();
 def buildstatement():
 	
 	return statement;
@@ -90,6 +107,11 @@ if __name__ == "__main__":
 	group2 = optparse.OptionGroup(parser, 'Add Training options')
 	# group4 = optparse.OptionGroup(parser, 'Add Trial data options')
 	# group5 = optparse.OptionGroup(parser, 'Add video and tracking file options')
+	parser.add_option("-l","--querylist", dest="querylist", #Boolean argument
+					 help='Enter a custom select query and prints result \n\
+					 Helpful custom queries: \n\
+					 listtables = "select name from sqlite_master where type=\'table\'" ', 
+					 default=None, type="string")
 #	Add New Study Options
 	parser.add_option("-s","--addstudy", dest="addstudy", #Boolean argument
 					 help='Required when adding a study to the database in the Study table;\n\
@@ -203,14 +225,24 @@ if __name__ == "__main__":
 	usage = "%s [options] database.db" %prog
 	# Declare some variables and check boolean options presence
 	if ((opts.addstudy == False and opts.addmouse == False and opts.addtraining == False \
-		and opts.rotarod == False) or (args == [])):
+		and opts.rotarod == False and opts.querylist == None) or (args == [])):
 	 	print 'Missing a database or no input options given... \n' + usage + '\n'
 	 	sys.exit()
 	else:
-		print "Attempting to run %s..." %prog
 		database = args[0]
-		print 'Preparing to enter data into ' + database
 		con = sqlite3.connect(database)
+		print "Connected to %s" % (database)
+
+
+##################################
+# Perform a custom query and print		
+##################################
+	if opts.querylist != None:
+		cols, queryresult = fetchalldb(con, opts.querylist, None)
+		print ', '.join("%s" %i[0] for i in cols)
+		for row in queryresult:
+			print ', '.join("%s" %i for i in row)
+			# print ', '.join('v{}: {}'.format(v, i) for v, i in enumerate(row))
 
 ##################################
 # Add Study to database			
@@ -353,7 +385,7 @@ if __name__ == "__main__":
 					print "Data added: Rod Speed Duration EndSpeed "
 					print items[3]+" "+items[2]+" "+items[5]+" "+items[6].strip(' RPM')
 				else:
-					print "This mouse, trial and day already exist in the %s" %database
+					print "Mouse %s, trial %s and day %s already exist in %s" % (mouseid, trial, opts.day, database)
 		else:
 			print '\nMandatory options for adding rotarod session to %s are missing.\n%s\n' % (database, help.rotarodopts)		
 
