@@ -84,3 +84,47 @@ for each row begin
 select raise(abort, 'Update on table "Rotarod" violates Foreign Key Constraint "RotarodUpdate" - ensure mouse is in database')
 where (SELECT MouseID FROM Mouse WHERE MouseID = NEW.MouseID) is null;
 end;
+
+CREATE TABLE MWM (
+MouseID TEXT NOT NULL, --# From Mouse table
+TrainingID TEXT NOT NULL, --# From Training table
+Day INTEGER,
+Trial INTEGER,
+Platform INTEGER,
+TimeToPlatform REAL,
+TrialDuration REAL,
+DistanceTravel REAL, --# unit? cm
+AverageSpeed REAL, --# unit? cm/s
+MeanProximity REAL, 
+CumulativeProximity REAL,
+QuadrantTimeAdjL REAL,
+QuadrantTimeTr REAL,
+QuadrantTimeAdjR REAL,
+QuadrantTimeOpp REAL,
+QuadrantPctAdjL REAL,
+QuadrantPctTr REAL,
+QuadrantPctAdjR REAL,
+QuadrantPctOpp REAL,
+PlatformCrossingsAdjL INTEGER,
+PlatformCrossingsTr INTEGER,
+PlatformCrossingsAdjR INTEGER,
+PlatformCrossingsOpp INTEGER,
+ZonePctTime1 REAL,
+ZonePctTime2 REAL,
+ZonePctTime3 REAL,
+ZonePctTime4 REAL,
+FOREIGN KEY (TrainingID) REFERENCES Training(TrainingID),
+FOREIGN KEY (MouseID) REFERENCES Mouse(MouseID)); 
+
+CREATE TRIGGER MWMInsert
+before insert on MWM
+for each row begin
+select raise(abort, 'Insert on table "MWM" violates Foreign Key Constraint "MWMInsert" - ensure mouse is in database')
+where (SELECT MouseID FROM Mouse WHERE MouseID = NEW.MouseID) is null;
+end;
+CREATE TRIGGER MWMUpdate
+before update on MWM
+for each row begin
+select raise(abort, 'Update on table "MWM" violates Foreign Key Constraint "MWMUpdate" - ensure mouse is in database')
+where (SELECT MouseID FROM Mouse WHERE MouseID = NEW.MouseID) is null;
+end;

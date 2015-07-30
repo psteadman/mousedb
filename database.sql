@@ -17,10 +17,11 @@ DateAdded TEXT
 CREATE TABLE Mouse (
 MouseID TEXT NOT NULL PRIMARY KEY, --# Unique name for a mouse
 StudyID TEXT NOT NULL, --# StudyID for which this mouse participated in
-DOB TEXT, --# Date of birth for mouse --- YYYYMMDD
 Breeder TEXT, --# The breeder cage number
-Cage TEXT, --# The cage number for mouse
+DOB TEXT, --# Date of birth for mouse --- YYYYMMDD
+Cage TEXT, --# The cage number for mouse - study specific cage number
 Sex TEXT, --# The sex of the mouse
+EarTag TEXT, --# Ear tag of mouse (if applicable)
 Genotype TEXT, --# The genotype for mouse
 Injections TEXT, --# Type and number of injections then weight of mouse at injection (if applicable)
 Notes TEXT,
@@ -93,8 +94,22 @@ Trial INTEGER,
 Platform INTEGER,
 TimeToPlatform REAL,
 TrialDuration REAL,
-DistanceTravelcm REAL, --# unit?
-AverageSpeedcms REAL, --# unit?
+DistanceTravel REAL, --# unit? cm
+AverageSpeed REAL, --# unit? cm/s
+MeanProximity REAL, 
+CumulativeProximity REAL,
+QuadrantTimeAdjL REAL,
+QuadrantTimeTr REAL,
+QuadrantTimeAdjR REAL,
+QuadrantTimeOpp REAL,
+QuadrantPctAdjL REAL,
+QuadrantPctTr REAL,
+QuadrantPctAdjR REAL,
+QuadrantPctOpp REAL,
+PlatformCrossingsAdjL INTEGER,
+PlatformCrossingsTr INTEGER,
+PlatformCrossingsAdjR INTEGER,
+PlatformCrossingsOpp INTEGER,
 ZonePctTime1 REAL,
 ZonePctTime2 REAL,
 ZonePctTime3 REAL,

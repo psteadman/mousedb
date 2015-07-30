@@ -27,7 +27,7 @@ Requires sqlite3 - most computers should have this installed already but if not 
 ##### Setting up your sqlite database
 
 ``` sh
-sqlite3 databasename.db < filename.sql
+sqlite3 databasename.db <  databaseschemafile.sql
 ```
 
 ##### mousedb.py usage
