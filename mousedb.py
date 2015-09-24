@@ -22,31 +22,16 @@ import csv
 import sqlite3
 import datetime
 
-#---------------------------------------------------------------------------------
-#							TO DO
-# Add option --update or --rewrite to update an entry in a table. Should be a logical function (T/F)
-# Error checking for whether options input data is formated correctly
-
-# Think about how options can be put in as lists and then entered in the database (1 row=1 entry)
-# Write code in R to input behaviour analysis data into BarnesBehaviour table
-
-# FIXED so that if prior scan doesnt exist for a mouse scanned first time on a day other than 0 it will work...
-# SEEMS FINE in R: Question whether the default for trday and rday should be 'NA' or should it be None
-# DONE: Add something in add scan and add mouse training and add behaviour trial which checks to make sure that entry doesn't already exist
-# DONE: Add function for determining the month in numeric form from input of month in three letter short form
-# DONE for all but tracking/video file: Add error statement to not only list required options but also optional options.
-# DONE: For the option itself... For option itself optparser checks for option to exist
-# DONE Take optparse help and the error checking statements and make them a variable which is called by both so that changes are centralized
-# DONE: Remove all conn and create a function for executing with database that just has input of the statement and variables
-# DONE: Create new program that updates all days since last scan and nscan and then just run this at the end of the program every time it is run - CALLED Update-dates.py
-#---------------------------------------------------------------------------------
-
-# Dictionary of options and sqlite database column
+# Dictionary of options and sqlite database column #TODO
 columns = {
 	'studyid' : 'StudyID',
 	'mouseid' : 'MouseID'
 }
 # Functions:
+'''
+	Defining some functions which are commonly called
+	Mostly around interacting with the sqlite database
+'''
 def executedb( connection, statement, variables ):
 	# 
 	# executes a statement (e.g. insert, delete or update)
@@ -75,25 +60,33 @@ def fetchalldb( connection, statement, variables ):
 	return [out.description, out.fetchall()]
 	out.close();
 def buildstatement():
-	
+	#
+	# Constructs the statement sent to database by executedb or fetchdb/fetchalldb
+	#
+
 	return statement;
 def buildvariables():
-	
+	#
+	# Constructs the variable list sent to database by executedb or fetchdb/fetchalldb
+	#
+
 	return variables;
 
 # Variables for help dialogues
-help.studyopts = 'Required options: --studyid, --mouseprefix'
-help.mouseopts = 'Required options: --dob (i.e. yyyymmdd), \
+help.studyopts = 'Required: --studyid, --mouseprefix'
+help.mouseopts = 'Required: --dob (i.e. yyyymmdd), \
 --breeder, --cage\n \
-Optional options: --mouseid, --genotype'
-help.trainingopts = 'Required options: --mouseid, --ttype, \
+Optional: --mouseid, --genotype, --eartag'
+help.trainingopts = 'Required: --mouseid, --ttype, \
 --trainingid, --startdate (i.e. yyyymmdd) --protocol\n \
-Optional options: None'
-help.rotarodopts = 'Required options: --mouseid, --trainingid, --day, \
+Optional: None'
+help.rotarodopts = 'Required: --mouseid, --trainingid, --day, \
 --csvfile\n \
-Optional options: None'
+Optional: --nmice --rodzone'
+help.watermazeopts = ' Not yet implemented \n\
+Required: --mouseid --trainingid --day --csvfile \n\
+Optional: --nmice'
 
-help.watermazeopts = ' Not yet implemented '
 help.fcopts = ' Not yet implemented '
 
 
@@ -105,9 +98,9 @@ if __name__ == "__main__":
 	group0 = optparse.OptionGroup(parser, 'Add Study options')
 	group1 = optparse.OptionGroup(parser, 'Add Mouse options')
 	group2 = optparse.OptionGroup(parser, 'Add Training options')
-	# group4 = optparse.OptionGroup(parser, 'Add Trial data options')
+	group3 = optparse.OptionGroup(parser, 'Add Training data options')
 	# group5 = optparse.OptionGroup(parser, 'Add video and tracking file options')
-	parser.add_option("-l","--querylist", dest="querylist", #Boolean argument
+	parser.add_option("-l","--querylist", dest="querylist",
 					 help='Enter a custom select query and prints result \n\
 					 Helpful custom queries: \n\
 					 listtables = "select name from sqlite_master where type=\'table\'" ', 
@@ -115,7 +108,7 @@ if __name__ == "__main__":
 #	Add New Study Options
 	parser.add_option("-s","--addstudy", dest="addstudy", #Boolean argument
 					 help='Required when adding a study to the database in the Study table;\n\
-					 Other %s' %help.studyopts, 
+					 %s' %help.studyopts, 
 					 default=False, action='store_true')
 	group0.add_option("--studyid", dest="studyid",
 					 help="StudyID or the name of the study \n \
@@ -128,13 +121,14 @@ if __name__ == "__main__":
 #	Add New Mouse Options
 	parser.add_option("-m","--addmouse", dest="addmouse", #Boolean argument
 					 help='Required when adding a mouse to the database in the Mouse table;\n\
-					 Other %s' %help.mouseopts, 
+					 %s' %help.mouseopts, 
 					 default=False, action='store_true')
 	group1.add_option("--dob", dest="dob",
 					 help="Date of birth of a specific animal (i.e. dd/mm/yyyy)",
 					 type="string",default=None)
 	group1.add_option("--cage", dest="cage",
-					 help="Home cage of a specific animal",
+					 help="Home cage of a specific animal \n\
+					 (550540 or 550540-10 where -## is study specific)",
 					 type="string",default=None)	
 	group1.add_option("--breeder", dest="breeder",
 					 help="Breeder cage number",
@@ -148,6 +142,9 @@ if __name__ == "__main__":
 	group1.add_option("--sex", dest="sex",
 					 help="Sex of the animal",
 					 type="string",default="M")
+	group1.add_option("--ear", dest="eartag",
+					 help="Ear tag of mouse (if applicable) - e.g. NH, HR etc.",
+					 type="string",default=None)
 
 	group1.add_option("--mouseid", dest="mouseid",
 					 help="MouseID of a specific animal (e.g. studyprefix_####)",
@@ -159,61 +156,62 @@ if __name__ == "__main__":
 #	Add New Training Regime Options
 	parser.add_option("-t","--addtraining", dest="addtraining", #Boolean argument
 					 help='Required when adding a mouse to the database in the Training table;\n\
-					 Other %s' %help.trainingopts,
+					 %s' %help.trainingopts,
 					 default=False, action='store_true')
 	group2.add_option("--ttype", dest="trainingtype",
 					 help="Type of training for animal of interest \n \
-					 (e.g. FC-Cxt, MWM-spatial, Rotarod, FC-Tone)",
+					 (e.g. FC-Cxt, FC-Tone, MWM-spatialtrain, MWM-probe24h, Rotarod, Rotarod-SitCtrl)",
 					 type="string",default=None)
 	group2.add_option("--startdate", dest="startdate",
 					 help="Start date of training for animal of interest with that TrainingID \n \
 					 Format is yyyymmdd",
 					 type="string",default=None)
-	# would be cool to automate this below... increment for each group but how do you define a group?
+	# would be cool to automate this below... 
+	# increment for each group but how do you define a group?
 	group2.add_option("--trainingid", dest="trainingid",
 					 help="Current training session type for animal of interest \n \
-					 Format is YYYY-###",
+					 Format is yyyy-###",
 					 type="string", default=None)
 	group2.add_option("--protocol", dest="protocol",
-					 help="Training protocol for animal of interest (default: 1)",
+					 help="Training protocol for animal of interest \n\
+					 Format is '10 trial/day, 4 days' ",
 					 type="string", default=None)
 
 #	Add rotarod training data
 	parser.add_option("-r","--addrotarod",dest="rotarod", #Boolean argument
 					 help='Required when adding rotarod data to the database; \n\
-					 Other %s' %help.rotarodopts,
+					 %s' %help.rotarodopts,
 					 default=False, action='store_true')
-	group2.add_option("--day", dest="day",
+	group3.add_option("--day", dest="day",
 					 help="Day of data acquisition if a part of a process",
 					 type="int")
-	group2.add_option("--nmice", dest="nmice",
+	group3.add_option("--nmice", dest="nmice",
 					 help="Number of mice in the csv file you are adding",
 					 default="1", type="int")
-	group2.add_option("--rodzone", dest="mouserodzone",
+	group3.add_option("--rodzone", dest="mouserodzone",
 					 help="If adding a mouse, specific which rod/zone trained on",
 					 default=None, type="int")
-	group2.add_option("--csvfile", dest="csvfile",
+	group3.add_option("--csvfile", dest="csvfile",
 					 help="csv file of behaviour data",
 					 type="string",default=None) 
 					 # Not read as a string but as a csv file... must fix this
 
-#	Add fear conditioning training data
-	parser.add_option("-f","--addfearconditioning",dest="fearconditioning",
-					 help='Required when adding fear conditioning data to the database; \n\
-					 Other %s' %help.fcopts,
-					 default=False, action='store_true')
-
 #	Add morris watermaze training data
 	parser.add_option("-w","--addwatermaze",dest="mwm",
 					 help='Required when adding watermaze data to the database; \n\
-					 Other %s' %help.watermazeopts,
+					 %s' %help.watermazeopts,
 					 default=False, action='store_true')
 
-
+#	Add fear conditioning training data
+	parser.add_option("-f","--addfearconditioning",dest="fearconditioning",
+					 help='Required when adding fear conditioning data to the database; \n\
+					 %s' %help.fcopts,
+					 default=False, action='store_true')
 
 	parser.add_option_group(group0)
 	parser.add_option_group(group1)
 	parser.add_option_group(group2)
+	parser.add_option_group(group3)
 
 	(opts, args) = parser.parse_args()
 ###########################
@@ -275,9 +273,9 @@ if __name__ == "__main__":
 				mouseid = opts.mouseid
 			print 'Adding mouse ' + mouseid + ' to ' + database
 			executedb(con, 'INSERT INTO Mouse (MouseID, StudyID, DOB, Breeder, Cage, Sex, \
-						Genotype, Notes) VALUES (?,?,?,?,?,?,?,?)',
+						Genotype, Notes, EarTag) VALUES (?,?,?,?,?,?,?,?)',
 					   	(mouseid, opts.studyid, opts.dob, opts.breeder, opts.cage, opts.sex, 
-					   	opts.genotype, opts.mnote))
+					   	opts.genotype, opts.mnote, opts.eartag))
 			print '%s successfully added to %s' % (mouseid,database)
 		elif opts.injections != None and opts.mouseid != None:
 			# This will update even if mouse id is wrong, dbdata is None if mouseid doesnt exist
@@ -385,47 +383,60 @@ if __name__ == "__main__":
 					print "Data added: Rod Speed Duration EndSpeed "
 					print items[3]+" "+items[2]+" "+items[5]+" "+items[6].strip(' RPM')
 				else:
+					# Need some check if opts.trainingid exists for mouseid, if not list current ones
 					print "Mouse %s, trial %s and day %s already exist in %s" % (mouseid, trial, opts.day, database)
 		else:
 			print '\nMandatory options for adding rotarod session to %s are missing.\n%s\n' % (database, help.rotarodopts)		
 
-# # Add watermaze data to the database
-# 	if opts.watermaze == 1:
-# 		try:
-# 			mouseid 
-# 		except NameError:
-# 			mouseid = opts.mouseid 
-# # Check for correct input options
-# 	# Perhaps assume mice trained in sequence so then ask for n mice and take first mouse + n for csvdata
-# 		if opts.csvfile != None and opts.trainingid != None and mouseid != None and opts.day != None:
-# 			if opts.nmice == 1 or opts.nmice == None: # we are adding many mice :)
-# 				print "Entering %s mouse" %opts.nmice
-# 			elif opts.nmice > 1:
-# 				print "Entering %s mice" %opts.nmice
-# 			elif opts.nmice < 1:
-# 				print "Dude, less than 1 mouse given - are you sure you did this right?"
-# 				sys.exit()
-# 			# add data
-# 			trial_csv = open(opts.csvfile, 'r')
-# 			trial_csv.readline(); trial_csv.readline() # header line x2
-# 			entries = trial_csv.readlines()
+##################################
+# Add watermaze data to the database - #TODO
+##################################
+	if opts.mwm == 1:
+		try:
+			mouseid 
+		except NameError:
+			mouseid = opts.mouseid 
+		# Check for correct input options
+			# Perhaps assume mice trained in sequence so then ask for n mice and 
+			# take first mouse + n for csvdata - THIS IS NOT A CONSISTENT ASSUMPTION
+			# Thus must have an option to just enter 1 mouse with specified zone
+		if opts.csvfile != None and opts.trainingid != None and mouseid != None and opts.day != None:
+			if opts.nmice == 1 or opts.nmice == None:
+				if opts.mouseseqnum == None: #NEED TO CREAT THIS
+					print "Missing option --seqnum when entering 1 mouse only"; sys.exit() #NEED TO CREATE THIS
+				print "Entering 1 mouse. This mouse's is %s" %opts.mouseseqnum #NEED TO CREATE THIS
+			elif opts.nmice > 1:
+				print "Entering %s mice" %opts.nmice
+			elif opts.nmice < 1:
+				print "Dude, less than 1 mouse given - are you sure you did this right?"
+				sys.exit()
+			# add data
+			trial_csv = open(opts.csvfile, 'r')
+			trial_csv.readline(); trial_csv.readline() # header line x2
+			entries = trial_csv.readlines()
 
-
-# 			# Checking to see if entry already exists based on MouseID and starting date of training
-# 				(d, ) = fetchdb(con, 'Select count(*) from Rotarod where MouseID = ? \
-# 					and TrainingID = ? and Day = ? and Trial = ?', (mouseid, opts.trainingid, opts.day, trial))
-# 				if d == 0:
-# 					executedb(con, 'INSERT INTO Rotarod (MouseID, TrainingID, Day, Trial,\
-# 								Rod, Speed, Duration, EndSpeed) values (?,?,?,?,?,?,?,?)',
-# 								(mouseid, opts.trainingid, opts.day, trial, items[3], items[2],  
-# 								items[5], items[6].strip(' RPM')))
-# 					print "Added %s for %s on day %s in trial %s" % (mouseid, opts.trainingid, opts.day, trial)
-# 					print "Data added: Rod Speed Duration EndSpeed "
-# 					print items[3]+" "+items[2]+" "+items[5]+" "+items[6].strip(' RPM')
-# 				else:
-# 					print "This mouse, trial and day already exist in the %s" %database
-# 		else:
-# 			print '\nMandatory options for adding rotarod session to %s are missing.\n%s\n' % (database, help.rotarodopts)		
+			# Checking to see if entry already exists based on MouseID and starting date of training
+			(d, ) = fetchdb(con, 'Select count(*) from MWM where MouseID = ? \
+				and TrainingID = ? and Day = ? and Trial = ?', (mouseid, opts.trainingid, opts.day, trial))
+			if d == 0:
+				executedb(con, 'INSERT INTO MWM (MouseID, TrainingID, Day, Trial,\
+							Platform, TimeToPlatform, TrialDuration, DistanceTravel, \
+							AverageSpeed, MeanProximity, CumulativeProximity, \
+							QuadrantTimeAdjL, QuadrantTimeTr, QuadrantTimeAdjR, \
+							QuadrantTimeOpp, QuadrantPctAdjL, QuadrantPctTr, QuadrantPctAdjR, \
+							QuadrantPctOpp, PlatformCrossingsAdjL, PlatformCrossingsTr, \
+							PlatformCrossingsAdjR, PlatformCrossingsOpp, ZonePctTime1, \
+							ZonePctTime2, ZonePctTime3, ZonePctTime4) \
+							values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+							(mouseid, opts.trainingid, day, trial, items[3], items[2],  
+							items[5], items[6].strip(' RPM')))
+				print "Added %s for %s on day %s in trial %s" % (mouseid, opts.trainingid, opts.day, trial)
+				print "Data added: Rod Speed Duration EndSpeed "
+				print items[3]+" "+items[2]+" "+items[5]+" "+items[6].strip(' RPM')
+			else:
+				print "This mouse, trial and day already exist in the %s" %database
+		else:
+			print '\nMandatory options for adding rotarod session to %s are missing.\n%s\n' % (database, help.watermazeopts)		
 
 
 # # Add fear conditioning data to the database
